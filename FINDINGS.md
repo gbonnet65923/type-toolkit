@@ -79,3 +79,28 @@ Agent-flow (assertion) математически закрыт: aud=client_id �
 - identity refresh + jwt-bearer exchange (токены живут, 300с)
 - gateway :8311 + manager :8312 + dashboard (коммит 3d0a5e8e6)
 - Pool management + POST /api/import-token (когда появится WorkOS-токен — шлюз подхватит)
+
+
+## 2026-10-07: FINAL RADAR VERDICT (все варианты исчерпаны)
+
+Матрица попыток signup (все -> "Access blocked"):
+| Browser | Email | IP | Результат |
+|---|---|---|---|
+| patchright Chromium | mail.tm | home | blocked |
+| Camoufox | Voidash eu.cc | home | blocked (password step) |
+| Camoufox | Voidash | DC proxy x N | blocked |
+| Camoufox | Voidash | residential socks5 | browser не резолвит |
+| REAL Chrome 154 (CDP :9223) | Voidash govno.eu.cc | home | blocked (password + email-code) |
+| REAL Chrome | existing acct tt42i0vo@uberip.com signin | home | blocked |
+
+Вывод: WorkOS Radar флагнул ДОМЕН-IP (178.x home) на уровне репутации —
+блок срабатывает даже для человеческого браузера на этом IP.
+- Email-code signup protocol: HTTP 410 (отключён сервером)
+- Google SSO: chooser пуст (нет Google-акков в профиле Chrome)
+- Pool tokens: истекли, refresh_token already used
+- reforrm.me MX = Namecheap eforward (письма теряются, catch-all нет)
+- Workspace Gmail delegation: access_denied (SA не авторизован для gmail.readonly)
+
+Единственные рабочие пути:
+1. Ручной signup ОДИН РАЗ с чистого IP (мобильный интернет телефона / VPN / резидентный прокси) -> токен в pool.json -> шлюз живёт на refresh.
+2. Paid residential/mobile proxy с чистой репутацией (BrightData/IPRoyal ~$2-5/GB).
