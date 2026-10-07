@@ -1,0 +1,81 @@
+{
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "type_autoreg",
+        "description": "Register ONE new type.com agent account (mail.tm dynamic domain -> auth.type.com/agent/identity -> agent-signup start/verify -> jwt-bearer exchange). Takes 60-180s. Account lands in the gateway pool.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "org": {"type": "string", "description": "Organization slug for signup. Default: reform-org", "default": "reform-org"}
+          }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "type_pool_refresh",
+        "description": "Refresh identity tokens for ALL accounts in the pool (rotating refresh_token + jwt-bearer re-exchange). Call when upstream returns 401/token expired.",
+        "parameters": {"type": "object", "properties": {}}
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "type_status",
+        "description": "Manager status: gateway up/down (:8311), pool count, recent log lines.",
+        "parameters": {"type": "object", "properties": {}}
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "type_accounts",
+        "description": "List pool accounts (redacted — no tokens): email, org, token lengths, last status.",
+        "parameters": {"type": "object", "properties": {}}
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "tt_files",
+        "description": "Browse/read the type-toolkit repo from the agent. Directory listing or file content (<=2MB). Credential files (pool.json, acct.json, api_token.json) are withheld automatically.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {"type": "string", "description": "Repo-relative path, e.g. '' (root), 'server', 'autoreg/gh_autoreg.py', 'USAGE.md'", "default": ""}
+          }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "type_chat",
+        "description": "OpenAI-compatible chat completion via the gateway (:8311) — pool-backed rotation. NOTE: upstream api.type.com currently returns 401 on agent tokens (aud=client policy); status is proxied verbatim.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "model": {"type": "string", "description": "Model id from /v1/models"},
+            "messages": {"type": "array", "items": {"type": "object"}, "description": "Chat messages [{role, content}]"}
+          },
+          "required": ["model", "messages"]
+        }
+      }
+    }
+  ],
+  "endpoints": {
+    "manager": "http://127.0.0.1:8312",
+    "gateway": "http://127.0.0.1:8311",
+    "tool_map": {
+      "type_autoreg": "POST manager:/api/autoreg {org}",
+      "type_pool_refresh": "POST manager:/api/refresh",
+      "type_status": "GET manager:/api/status",
+      "type_accounts": "GET manager:/api/accounts",
+      "tt_files": "GET manager:/files?path=...",
+      "type_chat": "POST gateway:/v1/chat/completions"
+    }
+  }
+}

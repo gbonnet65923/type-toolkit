@@ -105,7 +105,17 @@ def redact(acct):
 # ---------------------------------------------------------------- autoreg (full_reg.py flow)
 def autoreg_one(org="reform-org"):
     user = "tt" + "".join(random.choices(string.ascii_lowercase + string.digits, k=6))
-    email = user + "@uberip.com"
+    # dynamic mail.tm domain (hardcoded domains go stale -> 422 ConstraintViolation)
+    st, doms = api("GET", "https://api.mail.tm/domains")
+    dom = None
+    if st == 200 and isinstance(doms, dict):
+        for d in doms.get("hydra:member", []):
+            if d.get("isActive"):
+                dom = d.get("domain")
+                break
+    if not dom:
+        raise RuntimeError("mail.tm domains unavailable: %s" % str(doms)[:120])
+    email = user + "@" + dom
     mpwd = "Tp" + "".join(random.choices(string.ascii_letters + string.digits, k=12)) + "!"
 
     st, acc = api("POST", "https://api.mail.tm/accounts", body={"address": email, "password": mpwd})
@@ -266,6 +276,39 @@ class Handler(BaseHTTPRequestHandler):
             with POOL_LOCK:
                 pool = load_pool()
             self._send(200, [redact(a) for a in pool])
+        elif self.path.split("?")[0] == "/files":
+            # agent-visible file browser (repo dir only; secrets redacted)
+            qs = urllib.parse.urlparse(self.path).query
+            q = urllib.parse.parse_qs(qs)
+            rel = (q.get("path") or [""])[0].replace("\\", "/").lstrip("/")
+            base = os.path.dirname(ROOT)  # type-toolkit dir
+            target = os.path.normpath(os.path.join(base, rel))
+            if not target.startswith(base):
+                self._send(403, {"error": "outside whitelist"})
+                return
+            secret_names = {"pool.json", "acct.json", "api_token.json"}
+            try:
+                if os.path.isdir(target):
+                    entries = []
+                    for name in sorted(os.listdir(target)):
+                        if name in ("__pycache__", ".git"):
+                            continue
+                        p = os.path.join(target, name)
+                        entries.append({"name": name, "dir": os.path.isdir(p),
+                                        "size": os.path.getsize(p) if os.path.isfile(p) else 0})
+                    self._send(200, {"path": rel or ".", "type": "dir", "entries": entries})
+                elif os.path.isfile(target):
+                    if os.path.basename(target) in secret_names or os.path.getsize(target) > 2 * 1024 * 1024:
+                        self._send(200, {"path": rel, "type": "secret-or-big",
+                                         "note": "content withheld (credentials file or >2MB)"})
+                    else:
+                        with open(target, "rb") as f:
+                            self._send(200, {"path": rel, "type": "file",
+                                             "content": f.read().decode("utf-8", errors="replace")})
+                else:
+                    self._send(404, {"error": "not found"})
+            except Exception as e:
+                self._send(500, {"error": str(e)})
         else:
             self._send(404, {"error": "not found"})
 
