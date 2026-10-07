@@ -59,7 +59,7 @@ def main():
     if ok_total >= TARGET:
         log("target already reached, nothing to do")
         return
-    sources = ["HK1024"]
+    sources = ["SOCKSH"]
     done_this_run = 0
     while ok_total < TARGET and (not LIMIT or done_this_run < LIMIT):
         idx = st["next_idx"]

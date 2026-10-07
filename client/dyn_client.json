@@ -1,0 +1,1 @@
+{"client_id": "client_01M3SV193GZ1PNWPCNFCYX67RE", "client_id_issued_at": 1790794835, "application_type": "web", "client_name": "Type CLI", "grant_types": ["urn:ietf:params:oauth:grant-type:device_code", "refresh_token"], "redirect_uris": ["http://localhost:0/callback"], "response_types": ["code"], "token_endpoint_auth_method": "none"}

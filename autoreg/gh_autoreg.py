@@ -497,7 +497,7 @@ def main():
             cfg = None if PROXY_LABEL == "HOME" else proxy_cfg()
             log(f"browser retry #{browser_try} fresh {PROXY_LABEL} session")
         try:
-            with Camoufox(proxy=cfg, headless=True, humanize=True) as browser:
+            with Camoufox(proxy=cfg, headless=True, humanize=True, geoip=True) as browser:
                 page = browser.new_page()
                 dd_restore_trust(page.context)
                 if not open_signup(page):

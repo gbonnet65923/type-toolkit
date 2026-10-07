@@ -4,3 +4,6 @@
 *.png
 *.json
 __pycache__/
+
+server/pool.json
+server/pool.json.tmp

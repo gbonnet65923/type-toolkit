@@ -7,9 +7,11 @@ import imaplib
 import email as el
 
 DB = r"C:\Users\User\tmp\bpproxy_run\accounts.db"
-GUSER = "FARM_GMAIL@gmail.com"
-GPASS = "GMAIL_APP_PASS"
-proxy = None  # direct: ZTE modem dead
+from gh_mail import GmailIMAP  # real creds live in gh_mail - never copy them here
+_GMAIL = GmailIMAP()
+# The workstation IP drives the fleet control plane; a fraud flag on it costs
+# the whole fleet. Every login goes through the VPS SOCKS tunnel instead.
+proxy = {"server": "socks5://127.0.0.1:2090"}
 
 
 def fetch_device_code(addr, timeout=240, since=None):
@@ -18,7 +20,7 @@ def fetch_device_code(addr, timeout=240, since=None):
     while time.time() - t0 < timeout:
         try:
             m = imaplib.IMAP4_SSL("imap.gmail.com", 993)
-            m.login(GUSER, GPASS)
+            m.login(_GMAIL.user, _GMAIL.pass_)
             m.select("INBOX")
             st, data = m.search(None, '(FROM "noreply@github.com")')
             ids = data[0].split()[-4:]
@@ -89,6 +91,9 @@ def pat_for(username, password, totp_secret, email):
                     pass
         # 2FA TOTP?
         if "two-factor" in url:
+            if not totp_secret:
+                print(f"[p] {username} two-factor without totp_secret - skip")
+                return None
             totp = pyotp.TOTP(totp_secret).now()
             try:
                 page.fill("input[name='otp'], input#app_totp", totp, timeout=10000)
